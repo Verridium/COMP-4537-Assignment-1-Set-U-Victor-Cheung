@@ -5,7 +5,7 @@ const { request } = require('node:http');
 const app = express()
 const port = 5000
 
-app.listen(port || process.env.PORT, async () => {
+app.listen(process.env.PORT || port, async () => {
     try {
         await mongoose.connect('mongodb+srv://user1:VRJk55Ky8glhQoQe@cluster0.eg3xtej.mongodb.net/Pokemon?retryWrites=true&w=majority')
         mongoose.connection.db.dropDatabase();
