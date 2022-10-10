@@ -98,8 +98,8 @@ app.listen(port, async () => {
 
     // - create a new pokemon    
     app.use(express.json());
-    app.post('/api/v1/pokemon', (req, res) => {
-        var count = pokeModel.countDocuments({id:req.params.id})
+    app.post('/api/v1/pokemon', async (req, res) => {
+        var count = await pokeModel.countDocuments({id:req.params.id})
         pokeModel.create(req.body, function(err, data) {
             if(err) {
                 res.json({errmsg: "invalid pokemon"});
@@ -118,8 +118,8 @@ app.listen(port, async () => {
     // - delete a pokemon
     app.delete('/api/v1/pokemon/:id', (req, res) => {
         pokeModel.findOneAndDelete({id: req.params.id}, function(err, result) {
-            if(result == null) {
-                res.json({errmsg: "Pokemon not found"}); // can't find id in db
+            if(!result) {
+                res.json({errmsg: "Pokemon not found"});
             } else {
                 console.log(result);
                 res.send("Deleted Successfully"); 
@@ -129,19 +129,20 @@ app.listen(port, async () => {
     
     // - upsert a whole pokemon document
     app.put('/api/v1/pokemon/:id', (req, res) => {
-        pokeModel.updateOne({id: req.params.id}, req.body, function(err, result) {
+        pokeModel.findOneAndUpdate({id: req.params.id}, req.body, function(err, result) {
             if(err) {
                 res.json({errmsg: "Pokemon not found"});
-            } else {
+            } else if (!result){
                 console.log(result);
                 res.send("Updated Successfully");
+            } else {
             }
         })
     })
 
     // - patch a pokemon document or a portion of the pokemon document
     app.patch('/api/v1/pokemon/:id', (req, res) => {
-        pokeModel.updateOne({id: req.params.id}, req.body, function(err, result) {
+        pokeModel.findOneandUpdateOne({id: req.params.id}, req.body, function(err, result) {
             if(err) {
                 res.json({errmsg: "Pokemon not found"});
             } else {
