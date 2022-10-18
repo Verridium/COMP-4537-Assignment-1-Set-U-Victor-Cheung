@@ -54,7 +54,7 @@ app.listen(process.env.PORT || port, async () => {
         }); 
     })
 
-    //grab the pokemon
+   //grab the pokemon
     https.get("https://raw.githubusercontent.com/fanzeyi/pokemon.json/master/pokedex.json", function(res) {
         var chunks = "";
         res.on("data", function(chunk) {
@@ -67,6 +67,41 @@ app.listen(process.env.PORT || port, async () => {
             })
         })
     })
+
+})
+
+
+app.get("/pokemonsAdvancedFiltering", async (req, res) => {
+    const comparisonOperators = req.query.comparisonOperators
+    const filters = comparisonOperators.split(",").map((operator) => operator.trim());
+    const filterRegex = /(\w+)([<>=]+)(\w+)/;
+    let query = {}
+    filters.map((filter) => {
+        const match = filter.match(filterRegex);
+    
+        if (match) {
+            const field = match[1];
+            const operator = match[2];
+            const value = match[3];
+
+            if (operator === "=") {
+                query[field] = value;
+            } else if (operator === ">") {
+                query[field] = { $gt: value };
+            } else if (operator === "<") {
+                query[field] = { $lt: value };
+            } else if (operator === ">=") {
+                query[field] = { $gte: value };
+            } else if (operator === "<=") {
+                query[field] = { $lte: value };
+            } else if (operator === "!=") {
+                query[field] = { $ne: value };
+            }
+        }
+    })
+
+    const pokemons = await pokeModel.find(query);
+    res.send(pokemons);
 
 })
 
