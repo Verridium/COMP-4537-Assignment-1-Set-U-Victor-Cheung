@@ -17,6 +17,11 @@ const {
 
 const { asyncWrapper } = require('./asyncWrapper.js');
 
+const dotenv = require("dotenv")
+dotenv.config();
+
+const pokeUser = require('./pokeUser.js');
+
 const app = express()
 const port = 5000
 var pokeModel = null;
@@ -29,11 +34,55 @@ const start = asyncWrapper(async (req, res, next) => {
         if (err)
             throw new PokemonDbError(err);
         else
-            console.log(`phew! server is running on port: ${port}`);
+            console.log(`phew! server is running on port: ${process.env.PORT}`);
     })
 })
 
 start();
+app.use(express.json());
+
+const bcrypt = require("bcrypt")
+app.post('/register', asyncWrapper(async (req, res) => {
+  const { username, password, email } = req.body
+  const salt = await bcrypt.genSalt(10)
+  const hashedPassword = await bcrypt.hash(password, salt)
+  const userWithHashedPassword = { ...req.body, password: hashedPassword }
+
+  const user = await pokeUser.create(userWithHashedPassword)
+  res.send(user)
+}))
+
+const jwt = require("jsonwebtoken")
+app.post('/login', asyncWrapper(async (req, res) => {
+  const { username, password } = req.body
+  const user = await pokeUser.findOne({ username })
+  if (!user) {
+    throw new PokemonBadRequest("User not found")
+  }
+  const isPasswordCorrect = await bcrypt.compare(password, user.password)
+  if (!isPasswordCorrect) {
+    throw new PokemonBadRequest("Password is incorrect")
+  }
+
+  // Create and assign a token
+  const token = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET)
+  res.header('auth-token', token)
+
+  res.send(user)
+}))
+
+const auth = (req, res, next) => {
+const token = req.header('auth-token')
+  if (!token) {
+    throw new PokemonBadRequest("Access denied")
+  }
+  try {
+    const verified = jwt.verify(token, process.env.TOKEN_SECRET) // nothing happens if token is valid
+    next()
+  } catch (err) {
+    throw new PokemonBadRequest("Invalid token")
+  }
+}
 
 app.get('/api/v1/pokemons', asyncWrapper(async (req, res) => {
     if (!req.query["count"])
